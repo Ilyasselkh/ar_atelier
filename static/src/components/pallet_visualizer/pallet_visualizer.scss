@@ -1,0 +1,218 @@
+.o_ar_pallet_visualizer {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-height: 600px;
+    background: #f7f8fa;
+    border: 1px solid #dde1e6;
+    border-radius: 6px;
+    overflow: hidden;
+
+    .o_ar_pv_toolbar {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 8px 12px;
+        background: #ffffff;
+        border-bottom: 1px solid #e3e6ea;
+
+        .o_ar_pv_scan {
+            flex: 1;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+
+            input {
+                flex: 1;
+                font-family: monospace;
+                font-size: 14px;
+                padding: 6px 10px;
+                border: 2px solid #714B67;
+                border-radius: 4px;
+                background: #fff;
+
+                &:focus {
+                    outline: none;
+                    border-color: #875A7B;
+                    box-shadow: 0 0 0 3px rgba(135, 90, 123, 0.2);
+                }
+            }
+        }
+
+        .o_ar_pv_mode {
+            display: flex;
+            border: 1px solid #c4c8cc;
+            border-radius: 4px;
+            overflow: hidden;
+
+            button {
+                padding: 6px 14px;
+                background: #fff;
+                border: none;
+                cursor: pointer;
+                font-weight: 500;
+
+                &.active {
+                    background: #714B67;
+                    color: #fff;
+                }
+                &:hover:not(.active) {
+                    background: #f0f0f0;
+                }
+            }
+        }
+
+        .o_ar_pv_counters {
+            display: flex;
+            gap: 8px;
+            font-size: 13px;
+
+            .badge {
+                padding: 4px 10px;
+                border-radius: 12px;
+                font-weight: 500;
+            }
+            .badge-p1 { background: #e3f2fd; color: #1565c0; }
+            .badge-p2 { background: #e8f5e9; color: #2e7d32; }
+            .badge-p3 { background: #fff3e0; color: #e65100; }
+            .badge-total { background: #f3e5f5; color: #6a1b9a; }
+        }
+    }
+
+    .o_ar_pv_message {
+        padding: 6px 12px;
+        font-size: 13px;
+        text-align: center;
+        font-weight: 500;
+
+        &.success { background: #e8f5e9; color: #2e7d32; }
+        &.error { background: #ffebee; color: #c62828; }
+        &.info { background: #e3f2fd; color: #1565c0; }
+    }
+
+    .o_ar_pv_canvas_wrap {
+        flex: 1;
+        position: relative;
+        min-height: 540px;
+        background: linear-gradient(180deg, #eef2f5 0%, #d6dde3 100%);
+
+        .o_ar_pv_2d {
+            display: flex;
+            justify-content: space-around;
+            align-items: flex-start;
+            padding: 20px;
+            gap: 20px;
+            min-height: 540px;
+            box-sizing: border-box;
+            overflow-x: auto;
+            overflow-y: auto;
+
+            .o_ar_pv_pallet {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 6px;
+                background: #fff;
+                border: 2px solid #d0d4d8;
+                border-radius: 8px;
+                padding: 14px 16px;
+                min-width: 300px;
+                box-shadow: 0 2px 6px rgba(0,0,0,0.10);
+                transition: border-color 0.3s, box-shadow 0.3s;
+
+                &.full {
+                    border-color: #c62828;
+                    box-shadow: 0 0 0 4px rgba(198, 40, 40, 0.18);
+                    animation: ar-pulse 1.6s infinite;
+                }
+
+                .o_ar_pv_pallet_header {
+                    width: 100%;
+                    text-align: center;
+
+                    h4 {
+                        margin: 0 0 4px 0;
+                        font-size: 17px;
+                        font-weight: 700;
+                        color: #2c3e50;
+                    }
+                    .o_ar_pv_pallet_count {
+                        font-size: 14px;
+                        color: #555;
+
+                        strong {
+                            font-size: 18px;
+                            color: #1976d2;
+                        }
+                    }
+                    .o_ar_pv_full_alert {
+                        margin-top: 6px;
+                        padding: 4px 10px;
+                        background: #c62828;
+                        color: #fff;
+                        font-weight: 700;
+                        font-size: 12px;
+                        border-radius: 4px;
+                        letter-spacing: 0.5px;
+
+                        i { margin-right: 4px; }
+                    }
+                }
+
+                svg {
+                    background: #fafafa;
+                    border-radius: 4px;
+                    display: block;
+                }
+
+                .o_ar_pv_layer_info {
+                    font-size: 11px;
+                    color: #666;
+                    margin-top: 4px;
+                }
+            }
+        }
+
+        .o_ar_pv_3d {
+            width: 100%;
+            height: 100%;
+            min-height: 540px;
+            position: relative;
+
+            canvas {
+                display: block;
+                width: 100% !important;
+                height: 100% !important;
+            }
+
+            .o_ar_pv_3d_legend {
+                position: absolute;
+                top: 12px;
+                left: 12px;
+                background: rgba(255,255,255,0.92);
+                padding: 8px 12px;
+                border-radius: 6px;
+                font-size: 12px;
+                box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+
+                .legend-row {
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+
+                    .swatch {
+                        width: 14px;
+                        height: 14px;
+                        border-radius: 2px;
+                        display: inline-block;
+                    }
+                }
+            }
+        }
+    }
+}
+
+@keyframes ar-pulse {
+    0%, 100% { box-shadow: 0 0 0 4px rgba(198, 40, 40, 0.18); }
+    50% { box-shadow: 0 0 0 8px rgba(198, 40, 40, 0.32); }
+}

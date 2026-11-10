@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="module_category_atelier" model="ir.module.category">
+        <field name="name">Atelier</field>
+        <field name="description">Droits d'accès du module Atelier</field>
+        <field name="sequence">40</field>
+    </record>
+
+    <record id="privilege_atelier_user" model="res.groups.privilege">
+        <field name="name">Atelier — Opérateur</field>
+        <field name="category_id" ref="module_category_atelier"/>
+        <field name="sequence">10</field>
+    </record>
+
+    <record id="privilege_atelier_manager" model="res.groups.privilege">
+        <field name="name">Atelier — Manager</field>
+        <field name="category_id" ref="module_category_atelier"/>
+        <field name="sequence">20</field>
+    </record>
+
+    <record id="privilege_atelier_delete" model="res.groups.privilege">
+        <field name="name">Atelier — Suppression</field>
+        <field name="category_id" ref="module_category_atelier"/>
+        <field name="sequence">30</field>
+    </record>
+
+    <record id="group_atelier_delete" model="res.groups">
+        <field name="name">Actif</field>
+        <field name="privilege_id" ref="privilege_atelier_delete"/>
+        <field name="comment">Autorise la suppression des données Atelier. Droit indépendant des accès Opérateur et Manager.</field>
+    </record>
+
+    <record id="group_atelier_user" model="res.groups">
+        <field name="name">Actif</field>
+        <field name="privilege_id" ref="privilege_atelier_user"/>
+        <field name="comment">Peut créer des sessions de scan et scanner des boxes.</field>
+    </record>
+
+    <record id="group_atelier_manager" model="res.groups">
+        <field name="name">Actif</field>
+        <field name="privilege_id" ref="privilege_atelier_manager"/>
+        <field name="implied_ids" eval="[(4, ref('group_atelier_user'))]"/>
+        <field name="comment">Création et modification : sessions, palettes, boxes et configuration. Suppression autorisée aux administrateurs Odoo et au groupe Atelier — Suppression.</field>
+    </record>
+
+    <record id="privilege_atelier_display_prod" model="res.groups.privilege">
+        <field name="name">Atelier — Affichage Sortie PROD</field>
+        <field name="category_id" ref="module_category_atelier"/>
+        <field name="sequence">40</field>
+    </record>
+    <record id="group_atelier_display_prod" model="res.groups">
+        <field name="name">Actif</field>
+        <field name="privilege_id" ref="privilege_atelier_display_prod"/>
+        <field name="comment">Affiche le menu Sortie PROD.</field>
+    </record>
+
+    <record id="privilege_atelier_display_logistics" model="res.groups.privilege">
+        <field name="name">Atelier — Affichage Magasin et Tri</field>
+        <field name="category_id" ref="module_category_atelier"/>
+        <field name="sequence">50</field>
+    </record>
+    <record id="group_atelier_display_logistics" model="res.groups">
+        <field name="name">Actif</field>
+        <field name="privilege_id" ref="privilege_atelier_display_logistics"/>
+        <field name="comment">Affiche les menus Sortie de tri, Entré Magasin LOG et Sortie Magasin LOG.</field>
+    </record>
+    <record id="privilege_atelier_display_referentials" model="res.groups.privilege">
+        <field name="name">Atelier — Affichage Référentiels</field>
+        <field name="category_id" ref="module_category_atelier"/>
+        <field name="sequence">60</field>
+    </record>
+    <record id="group_atelier_display_referentials" model="res.groups">
+        <field name="name">Actif</field>
+        <field name="privilege_id" ref="privilege_atelier_display_referentials"/>
+        <field name="comment">Affiche les sous-menus Référentiel UC, Listes TRI hebdo et Listes OF hebdo.</field>
+    </record>
+    <record id="privilege_atelier_stock_overview" model="res.groups.privilege">
+        <field name="name">Atelier — Affichage Suivi du stock</field>
+        <field name="category_id" ref="module_category_atelier"/>
+        <field name="sequence">70</field>
+    </record>
+    <record id="group_atelier_stock_overview" model="res.groups">
+        <field name="name">Actif</field>
+        <field name="privilege_id" ref="privilege_atelier_stock_overview"/>
+        <field name="comment">Accès au menu et aux compteurs du suivi du stock, indépendant des droits de scan et de modification.</field>
+    </record>
+    <record id="privilege_atelier_reset" model="res.groups.privilege">
+        <field name="name">Atelier — Affichage Réinitialisation</field>
+        <field name="category_id" ref="module_category_atelier"/>
+        <field name="sequence">80</field>
+    </record>
+    <record id="group_atelier_reset" model="res.groups">
+        <field name="name">Actif</field>
+        <field name="privilege_id" ref="privilege_atelier_reset"/>
+        <field name="comment">Affiche la Réinitialisation et autorise la réinitialisation des sessions non clôturées sans anomalie restante.</field>
+    </record>
+</odoo>

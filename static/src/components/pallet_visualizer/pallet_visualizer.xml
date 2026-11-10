@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="ar_atelier.PalletVisualizer">
+        <div class="o_ar_pallet_visualizer">
+            <div class="o_ar_pv_toolbar">
+                <div class="o_ar_pv_scan">
+                    <i class="fa fa-barcode"/>
+                    <input type="text"
+                           t-ref="scanInput"
+                           placeholder="Scanner ou saisir un datamatrix..."
+                           t-on-keydown="onScanKeyDown"
+                           t-att-disabled="state.scanning"/>
+                </div>
+                <div class="o_ar_pv_mode">
+                    <button t-att-class="state.mode === '2d' ? 'active' : ''"
+                            t-on-click="() => this.setMode('2d')">2D</button>
+                    <button t-att-class="state.mode === '3d' ? 'active' : ''"
+                            t-on-click="() => this.setMode('3d')">3D</button>
+                </div>
+                <div class="o_ar_pv_counters">
+                    <span class="badge badge-p1">P1 : <t t-esc="counters.p1"/>/<t t-esc="counters.cap1"/></span>
+                    <span class="badge badge-p2">P2 : <t t-esc="counters.p2"/>/<t t-esc="counters.cap2"/></span>
+                    <span class="badge badge-p3">P3 : <t t-esc="counters.p3"/>/<t t-esc="counters.cap3"/></span>
+                    <span class="badge badge-total">Total : <t t-esc="counters.total"/></span>
+                </div>
+            </div>
+
+            <div t-if="state.message"
+                 t-att-class="'o_ar_pv_message ' + state.messageType">
+                <t t-esc="state.message"/>
+            </div>
+
+            <div class="o_ar_pv_canvas_wrap">
+                <div t-if="state.mode === '2d'" class="o_ar_pv_2d">
+                    <t t-foreach="state.pallets" t-as="pallet" t-key="pallet.number">
+                        <div t-att-class="'o_ar_pv_pallet ' + (pallet.boxes.length >= pallet.capacity ? 'full' : '')">
+                            <div class="o_ar_pv_pallet_header">
+                                <h4>Palette <t t-esc="pallet.number"/></h4>
+                                <div class="o_ar_pv_pallet_count">
+                                    <strong><t t-esc="pallet.boxes.length"/></strong> / <t t-esc="pallet.capacity"/> boxes
+                                </div>
+                                <div t-if="pallet.boxes.length >= pallet.capacity"
+                                     class="o_ar_pv_full_alert">
+                                    <i class="fa fa-exclamation-triangle"/> PALETTE PLEINE
+                                </div>
+                            </div>
+                            <svg t-att-width="getIsoSvg(pallet).w"
+                                 t-att-height="getIsoSvg(pallet).h"
+                                 t-att-viewBox="'0 0 ' + getIsoSvg(pallet).w + ' ' + getIsoSvg(pallet).h">
+                                <!-- Sol palette (planche bois en parallélogramme) -->
+                                <t t-set="iso" t-value="getIsoSvg(pallet)"/>
+                                <polygon t-att-points="iso.palletPoints"
+                                         fill="#a0673c" stroke="#5d3818" stroke-width="2"/>
+                                <polygon t-att-points="iso.palletTopPoints"
+                                         fill="#c2854f" stroke="#5d3818" stroke-width="1.5"/>
+
+                                <!-- Boxes -->
+                                <t t-foreach="iso.cells" t-as="cell" t-key="cell.id">
+                                    <!-- Emplacement vide : contour pointillé -->
+                                    <g t-if="!cell.box">
+                                        <polygon t-att-points="cell.frontPoints"
+                                                 fill="rgba(255,255,255,0.05)"
+                                                 stroke="rgba(120,120,120,0.4)"
+                                                 stroke-dasharray="4,3" stroke-width="1"/>
+                                    </g>
+                                    <!-- Box scannée : 3 faces -->
+                                    <g t-if="cell.box">
+                                        <polygon t-att-points="cell.rightPoints"
+                                                 t-att-fill="cell.colorRight"
+                                                 stroke="#1a1a1a" stroke-width="0.8"/>
+                                        <polygon t-att-points="cell.topPoints"
+                                                 t-att-fill="cell.colorTop"
+                                                 stroke="#1a1a1a" stroke-width="0.8"/>
+                                        <polygon t-att-points="cell.frontPoints"
+                                                 t-att-fill="cell.colorFront"
+                                                 stroke="#1a1a1a" stroke-width="0.8">
+                                            <title>
+                                                Position <t t-esc="cell.pos + 1"/>
+                                                | Couche <t t-esc="cell.layer + 1"/>
+                                                | (<t t-esc="cell.col + 1"/>,<t t-esc="cell.row + 1"/>)
+                                                <t t-if="cell.box.gtin"> | GTIN: <t t-esc="cell.box.gtin"/></t>
+                                                <t t-if="cell.box.lot"> | Lot: <t t-esc="cell.box.lot"/></t>
+                                            </title>
+                                        </polygon>
+                                        <text t-att-x="cell.labelX"
+                                              t-att-y="cell.labelY"
+                                              text-anchor="middle"
+                                              font-size="10"
+                                              font-weight="bold"
+                                              fill="#fff"
+                                              style="pointer-events: none;">
+                                            <t t-esc="cell.pos + 1"/>
+                                        </text>
+                                    </g>
+                                </t>
+                            </svg>
+                            <div class="o_ar_pv_layer_info">
+                                Couches : <t t-esc="getCurrentLayer(pallet) + 1"/> / <t t-esc="pallet.layers"/>
+                            </div>
+                        </div>
+                    </t>
+                </div>
+
+                <div t-if="state.mode === '3d'" class="o_ar_pv_3d" t-ref="threeContainer">
+                    <div class="o_ar_pv_3d_legend">
+                        <div><strong>Vue 3D</strong></div>
+                        <div class="legend-row"><span class="swatch" style="background:#1976d2"/> Palette 1</div>
+                        <div class="legend-row"><span class="swatch" style="background:#388e3c"/> Palette 2</div>
+                        <div class="legend-row"><span class="swatch" style="background:#f57c00"/> Palette 3</div>
+                        <div style="margin-top:6px;color:#666;font-size:11px;">
+                            Clic gauche : rotation<br/>
+                            Molette : zoom<br/>
+                            Clic droit : déplacement
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </t>
+
+</templates>

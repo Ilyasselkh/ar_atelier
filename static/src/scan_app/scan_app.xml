@@ -1,0 +1,393 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="ar_atelier.ScanApp">
+        <div class="o_ar_scan_app">
+            <div class="o_ar_sa_toolbar">
+                <h1 t-esc="pageTitle"/>
+                <div t-att-class="'o_ar_sa_session_status ' + (isSessionOpen ? 'is-open' : 'is-waiting')" role="status" aria-live="polite">
+                    <i t-att-class="isSessionOpen ? 'fa fa-check-circle' : 'fa fa-lock'" aria-hidden="true"/>
+                    <div>
+                        <strong t-esc="isSessionOpen ? 'Session ouverte' : 'En attente d’identification'"/>
+                        <small t-esc="isSessionOpen ? (referentialsBlocked ? 'Scan en attente des référentiels' : 'Scan en cours') : 'Scannez votre badge opérateur'"/>
+                    </div>
+                </div>
+
+                <div class="o_ar_sa_operator">
+                    <div class="op-field">
+                        <label>Matricule</label>
+                        <span t-att-class="state.operatorCode ? 'val' : 'val empty'">
+                            <t t-esc="state.operatorCode || '—'"/>
+                        </span>
+                    </div>
+                    <div class="op-field">
+                        <label>Nom</label>
+                        <span t-att-class="state.operatorName ? 'val' : 'val empty'">
+                            <t t-esc="state.operatorName || '—'"/>
+                        </span>
+                    </div>
+                    <div class="op-field" t-if="state.sessionName">
+                        <label>Session</label>
+                        <span class="val" t-esc="state.sessionName"/>
+                    </div>
+                </div>
+
+                <div class="o_ar_sa_scan">
+                    <i class="fa fa-barcode"/>
+                    <input type="text" t-ref="scanInput"
+                           t-att-placeholder="isSessionOpen ? 'Scanner une boxe…' : 'Scanner votre badge opérateur…'"
+                           aria-label="Scan du badge opérateur ou d’une boxe"
+                           t-on-keydown="onScanKeyDown"/>
+                </div>
+
+                <div class="o_ar_sa_mode">
+                    <button t-att-class="state.mode === '2d' ? 'active' : ''"
+                            t-on-click="() => this.setMode('2d')">2D</button>
+                    <button t-att-class="state.mode === '3d' ? 'active' : ''"
+                            t-on-click="() => this.setMode('3d')">3D</button>
+                </div>
+
+                <div class="o_ar_sa_counters">
+                    <span class="badge bp1">Stock : <t t-esc="counters.p1"/>/<t t-esc="counters.cap1"/></span>
+                    <span class="badge bp2">Tri : <t t-esc="counters.p2"/>/<t t-esc="counters.cap2"/></span>
+                    <span class="badge bp3">Anomalie : <t t-esc="counters.p3"/>/<t t-esc="counters.cap3"/></span>
+                    <span class="badge btot">Total : <t t-esc="counters.total"/></span>
+                </div>
+
+                <button class="o_ar_sa_close" t-on-click="closeAndNew" title="Clôturer" t-att-disabled="!isSessionOpen">
+                    <i class="fa fa-check-circle"/> Clôturer
+                </button>
+                <div t-if="mode === 'warehouse_out' &amp;&amp; isSessionOpen" class="o_ar_sa_operator">
+                    <div class="op-field">
+                        <label for="warehouse-out-reason">Motif (obligatoire pour clôturer)</label>
+                        <input id="warehouse-out-reason" type="text" t-model="state.warehouseOutReason"
+                               t-on-change="saveWarehouseOutReason" placeholder="Saisir le motif de sortie"/>
+                    </div>
+                </div>
+
+                <div class="o_ar_sa_admin">
+                    <button class="o_ar_sa_admin_btn" t-on-click="toggleAdminMenu">
+                        <i class="fa fa-bars"/> Admin
+                    </button>
+                    <div t-if="state.adminMenuOpen" class="o_ar_sa_admin_dropdown">
+                        <button t-on-click="openSessions"><i class="fa fa-list"/> Sessions</button>
+                        <button t-on-click="openPallets"><i class="fa fa-cubes"/> Palettes</button>
+                        <button t-on-click="openBoxes"><i class="fa fa-cube"/> Boxes</button>
+                        <button t-if="state.refStatus.can_configure_closure" t-on-click="openClosureSettings">
+                            <i class="fa fa-clock-o"/> Durée de clôture
+                        </button>
+                        <button t-if="state.refStatus.can_reset_sessions" t-on-click="openResetSessions">
+                            <i class="fa fa-refresh"/> Réinitialisation
+                        </button>
+                        <t t-if="state.refStatus.can_view_referentials">
+                            <div class="dropdown-sep"/>
+                            <button t-on-click="openUcRef"><i class="fa fa-tags"/> Référentiel UC</button>
+                            <button t-on-click="openTriList"><i class="fa fa-filter"/> Listes TRI hebdo</button>
+                            <button t-on-click="openOfList"><i class="fa fa-clipboard-list"/> Listes OF hebdo</button>
+                        </t>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bandeau référentiels -->
+            <div class="o_ar_sa_ref_bar">
+                <div class="ref-card uc">
+                    <span class="ref-title"><i class="fa fa-tags"/> UC</span>
+                    <span class="ref-meta">
+                        <t t-esc="state.refStatus.uc.count or 0"/> réfs •
+                        MAJ : <t t-esc="state.refStatus.uc.last_update or '—'"/>
+                    </span>
+                </div>
+                <div t-att-class="'ref-card tri ' + (state.refStatus.tri.active_list ? 'active' : 'inactive')">
+                    <span class="ref-title"><i class="fa fa-filter"/> TRI</span>
+                    <t t-if="state.refStatus.tri.active_list">
+                        <span class="ref-meta">
+                            <strong t-esc="state.refStatus.tri.active_list"/>
+                            — <t t-esc="state.refStatus.tri.ref_count"/> réfs •
+                            Validité : <t t-esc="state.refStatus.tri.valid_from"/> → <t t-esc="state.refStatus.tri.valid_to"/>
+                        </span>
+                    </t>
+                    <t t-else="">
+                        <span class="ref-meta empty">Aucune liste active cette semaine</span>
+                    </t>
+                </div>
+                <div t-att-class="'ref-card of ' + (state.refStatus.of.active_list ? 'active' : 'inactive')">
+                    <span class="ref-title"><i class="fa fa-clipboard-list"/> OF</span>
+                    <t t-if="state.refStatus.of.active_list">
+                        <span class="ref-meta">
+                            <strong t-esc="state.refStatus.of.active_list"/>
+                            — <t t-esc="state.refStatus.of.of_count"/> OF •
+                            Validité : <t t-esc="state.refStatus.of.valid_from"/> → <t t-esc="state.refStatus.of.valid_to"/>
+                        </span>
+                    </t>
+                    <t t-else="">
+                        <span class="ref-meta empty">Aucune liste OF active</span>
+                    </t>
+                </div>
+            </div>
+
+            <div t-if="state.message" t-att-class="'o_ar_sa_message ' + state.messageType">
+                <t t-esc="state.message"/>
+            </div>
+
+            <div t-att-class="'o_ar_sa_canvas' + (scanBlocked ? ' is-blocked' : '')">
+                <div t-if="scanBlocked" class="o_ar_sa_scan_gate" role="status" aria-live="polite">
+                    <div class="o_ar_sa_scan_gate_card">
+                        <div class="gate-icon"><i class="fa fa-lock" aria-hidden="true"/></div>
+                        <h2 t-esc="isSessionOpen ? 'Scan en attente' : 'En attente d’identification'"/>
+                        <p t-esc="scanBlockedMessage"/>
+                        <span t-if="!isSessionOpen" class="gate-hint">La session est créée automatiquement. Veuillez scanner votre badge.</span>
+                        <p t-if="!isSessionOpen &amp;&amp; referentialsBlocked" class="gate-ref-hint" t-esc="referentialsBlockedMessage"/>
+                        <span t-if="isSessionOpen" class="gate-hint">Le scan sera disponible dès que les trois référentiels seront alimentés.</span>
+                    </div>
+                </div>
+                <div t-if="state.mode === '2d'" class="o_ar_sa_2d" t-att-inert="scanBlocked ? '' : undefined">
+                    <t t-foreach="state.pallets" t-as="pallet" t-key="pallet.number">
+                        <div t-att-class="'o_ar_sa_pallet ' + (pallet.boxes.length >= pallet.capacity ? 'full' : '')">
+                            <h4 t-att-class="'pal-h4 pal-h4-p' + pallet.number">
+                                <t t-esc="getLabel(pallet)"/>
+                            </h4>
+                            <div class="cnt"><strong t-esc="pallet.boxes.length"/> / <t t-esc="pallet.capacity"/> boxes</div>
+                            <div t-if="pallet.boxes.length >= pallet.capacity" class="alert">
+                                <i class="fa fa-exclamation-triangle"/> PALETTE PLEINE
+                            </div>
+                            <svg t-att-width="getIso(pallet).w"
+                                 t-att-height="getIso(pallet).h"
+                                 t-att-viewBox="'0 0 ' + getIso(pallet).w + ' ' + getIso(pallet).h">
+                                <t t-set="iso" t-value="getIso(pallet)"/>
+                                <polygon t-att-points="iso.palletPts" fill="#a0673c" stroke="#5d3818" stroke-width="2"/>
+                                <polygon t-att-points="iso.palletTopPts" fill="#c2854f" stroke="#5d3818" stroke-width="1.5"/>
+                                <t t-foreach="iso.cells" t-as="c" t-key="c.id">
+                                    <g t-att-class="c.box ? 'iso-cell filled' : 'iso-cell empty'"
+                                       t-on-click="() => c.box ? this.openBoxDetail(c.box.id) : null"
+                                       t-att-style="c.box ? 'cursor:pointer;' : ''">
+                                        <t t-if="c.box">
+                                            <polygon t-att-points="c.right" t-att-fill="c.cR" stroke="#1a1a1a" stroke-width="0.8"/>
+                                            <polygon t-att-points="c.top" t-att-fill="c.cT" stroke="#1a1a1a" stroke-width="0.8"/>
+                                            <polygon t-att-points="c.front" t-att-fill="c.cF" stroke="#1a1a1a" stroke-width="0.8"/>
+                                        </t>
+                                        <t t-else="">
+                                            <polygon t-att-points="c.front"
+                                                     fill="rgba(255,255,255,0.05)"
+                                                     stroke="rgba(120,120,120,0.4)"
+                                                     stroke-dasharray="4,3" stroke-width="1"/>
+                                        </t>
+                                    </g>
+                                </t>
+                                <!-- 2ème passe : tous les textes au-dessus de toutes les boxes -->
+                                <t t-foreach="iso.cells" t-as="c" t-key="'txt-' + c.id">
+                                    <t t-if="c.box">
+                                        <text t-att-x="c.lx" t-att-y="c.ly - 4"
+                                              text-anchor="middle" font-size="9"
+                                              font-weight="bold" fill="#fff"
+                                              style="pointer-events:none;">
+                                            #<t t-esc="c.pos + 1"/>
+                                        </text>
+                                        <text t-if="c.box.hu" t-att-x="c.lx" t-att-y="c.ly + 8"
+                                              text-anchor="middle" font-size="8"
+                                              fill="#fff" opacity="0.95"
+                                              style="pointer-events:none;">
+                                            <t t-esc="c.box.hu"/>
+                                        </text>
+                                    </t>
+                                </t>
+                            </svg>
+
+                            <div class="o_ar_sa_box_list">
+                                <div class="box-list-title">
+                                    Boxes scannées (<t t-esc="pallet.boxes.length"/>)
+                                </div>
+                                <div t-if="!pallet.boxes.length" class="box-list-empty">
+                                    Aucune boxe scannée
+                                </div>
+                                <table t-else="" class="box-table">
+                                    <thead>
+                                        <tr>
+                                            <th>#</th>
+                                            <th>Réf</th>
+                                            <th>Qty</th>
+                                            <th>Lot</th>
+                                            <th>HU</th>
+                                            <th>Anomalie</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <t t-foreach="pallet.boxes" t-as="b" t-key="b.id">
+                                            <tr t-att-class="b.is_anomaly ? 'row-anomaly' : ''"
+                                                t-on-click="() => this.openBoxDetail(b.id)"
+                                                style="cursor:pointer;">
+                                                <td><t t-esc="b.position + 1"/></td>
+                                                <td class="td-ref" t-att-title="b.mat"><t t-esc="b.mat || '—'"/></td>
+                                                <td><t t-esc="b.qty || '—'"/></td>
+                                                <td t-att-title="b.bat"><t t-esc="b.bat || '—'"/></td>
+                                                <td><t t-esc="b.hu || '—'"/></td>
+                                                <td class="td-anomaly" t-att-title="b.anomaly_labels">
+                                                    <t t-esc="b.anomaly_labels || '—'"/>
+                                                </td>
+                                            </tr>
+                                        </t>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </t>
+                </div>
+                <div t-else="" class="o_ar_sa_3d" t-ref="threeContainer" t-att-inert="scanBlocked ? '' : undefined">
+                    <div class="legend">
+                        <div><strong>Vue 3D</strong></div>
+                        <div class="row"><span class="sw" style="background:#1976d2"/> Stock</div>
+                        <div class="row"><span class="sw" style="background:#388e3c"/> Tri</div>
+                        <div class="row"><span class="sw" style="background:#f57c00"/> Anomalie</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MODAL DÉTAIL BOXE -->
+            <div t-if="state.detailBox" class="o_ar_sa_modal_backdrop" t-on-click="closeBoxDetail">
+                <div class="o_ar_sa_modal" t-on-click.stop="">
+                    <div class="modal-header">
+                        <h3>Boxe <t t-esc="'Pos ' + (state.detailBox.position + 1)"/>
+                            <span t-att-class="'modal-section-badge sec-' + state.detailBox.section">
+                                <t t-esc="state.detailBox.section_name"/>
+                            </span>
+                        </h3>
+                        <button class="modal-close" t-on-click="closeBoxDetail">×</button>
+                    </div>
+                    <div class="modal-body">
+
+                        <!-- Bandeau anomalies -->
+                        <div t-if="(state.detailBox.anomaly_labels || []).length > 0" class="modal-section anomaly-banner">
+                            <h4><i class="fa fa-exclamation-triangle"/> Raisons de l'anomalie</h4>
+                            <ul class="anomaly-list">
+                                <t t-foreach="state.detailBox.anomaly_labels || []" t-as="lbl" t-key="lbl_index">
+                                    <li t-esc="lbl"/>
+                                </t>
+                            </ul>
+                        </div>
+
+                        <div class="modal-section">
+                            <h4>Étiquette</h4>
+                            <div class="modal-dm" t-esc="state.detailBox.datamatrix"/>
+                            <div class="modal-meta">
+                                Format : <strong t-esc="state.detailBox.format"/> |
+                                Scanné le <strong t-esc="state.detailBox.scan_datetime"/>
+                                par <strong t-esc="state.detailBox.user"/>
+                            </div>
+                        </div>
+
+                        <div class="modal-section">
+                            <h4>Données parsées</h4>
+                            <div class="field-grid">
+                                <div t-if="state.detailBox.fields.mat"><span>Réf (MAT)</span><strong t-esc="state.detailBox.fields.mat"/></div>
+                                <div t-if="state.detailBox.fields.qty"><span>Quantité (QTY)</span><strong t-esc="state.detailBox.fields.qty"/></div>
+                                <div t-if="state.detailBox.fields.bat"><span>Lot (BAT)</span><strong t-esc="state.detailBox.fields.bat"/></div>
+                                <div t-if="state.detailBox.fields.hu"><span>HU</span><strong t-esc="state.detailBox.fields.hu"/></div>
+                                <div t-if="state.detailBox.fields.po"><span>OF (PO)</span><strong t-esc="state.detailBox.fields.po"/></div>
+                                <div t-if="state.detailBox.fields.sloc"><span>SLOC</span><strong t-esc="state.detailBox.fields.sloc"/></div>
+                                <div t-if="state.detailBox.fields.sut"><span>SUT</span><strong t-esc="state.detailBox.fields.sut"/></div>
+                                <div t-if="state.detailBox.fields.bsd"><span>Date prod (BSD)</span><strong t-esc="state.detailBox.fields.bsd"/></div>
+                                <div t-if="state.detailBox.fields.pwg"><span>Poids unit (PWG)</span><strong t-esc="state.detailBox.fields.pwg"/></div>
+                                <div t-if="state.detailBox.fields.wghtg"><span>Poids total (WGHTG)</span><strong t-esc="state.detailBox.fields.wghtg"/></div>
+                                <div t-if="state.detailBox.fields.plt"><span>PLT</span><strong t-esc="state.detailBox.fields.plt"/></div>
+                                <div t-if="state.detailBox.fields.pal"><span>PAL</span><strong t-esc="state.detailBox.fields.pal"/></div>
+                                <div t-if="state.detailBox.fields.gtin"><span>GTIN</span><strong t-esc="state.detailBox.fields.gtin"/></div>
+                                <div t-if="state.detailBox.fields.lot"><span>Lot GS1</span><strong t-esc="state.detailBox.fields.lot"/></div>
+                                <div t-if="state.detailBox.fields.serial"><span>N° série</span><strong t-esc="state.detailBox.fields.serial"/></div>
+                            </div>
+                        </div>
+
+                        <div t-if="(state.detailBox.corrections || []).length > 0" class="modal-section">
+                            <h4>Historique des corrections (<t t-esc="state.detailBox.corrections.length"/>)</h4>
+                            <ol class="corrections-list">
+                                <t t-foreach="state.detailBox.corrections || []" t-as="corr" t-key="corr.id">
+                                    <li>
+                                        <div class="corr-header">
+                                            <strong t-esc="corr.date"/> — <span t-esc="corr.user"/>
+                                        </div>
+                                        <div t-if="corr.summary" class="corr-summary">
+                                            <div><strong>Avant correction :</strong> <t t-esc="corr.summary.before.join(' • ') || 'Aucune anomalie enregistrée'"/></div>
+                                            <div t-foreach="corr.summary.changes" t-as="change" t-key="change.field" class="corr-change">
+                                                <strong t-esc="change.label"/> :
+                                                <span t-esc="change.before === '' ? 'Non renseigné' : change.before"/>
+                                                <i class="fa fa-arrow-right mx-2" aria-label="devient"/>
+                                                <strong t-esc="change.after === '' ? 'Non renseigné' : change.after"/>
+                                            </div>
+                                            <div t-if="corr.summary.resolved.length" class="corr-resolved"><strong>Résolues :</strong> <t t-esc="corr.summary.resolved.join(' • ')"/></div>
+                                            <div t-if="corr.summary.after.length" class="corr-remaining"><strong>Reste à corriger :</strong> <t t-esc="corr.summary.after.join(' • ')"/></div>
+                                            <div t-else="" class="corr-resolved"><strong>Aucune anomalie après vérification.</strong></div>
+                                            <div t-if="corr.summary.introduced.length" class="corr-remaining"><strong>Nouvelles anomalies détectées :</strong> <t t-esc="corr.summary.introduced.join(' • ')"/></div>
+                                            <div t-if="corr.summary.transfer_pending" class="corr-remaining">Transfert non effectué : la palette de destination est pleine ou indisponible.</div>
+                                        </div>
+                                        <div t-else="" class="text-muted">Ancienne correction : le détail des anomalies avant/après n’a pas été enregistré.</div>
+                                        <div class="corr-old">Ancienne : <code t-esc="corr.old"/></div>
+                                        <div class="corr-new">Nouvelle : <code t-esc="corr.new"/></div>
+                                        <div class="corr-actions">Actions : <em t-esc="corr.actions"/></div>
+                                    </li>
+                                </t>
+                            </ol>
+                        </div>
+
+                        <div t-if="state.detailBox.can_cancel_duplicate || (state.detailBox.is_anomaly &amp;&amp; (state.refStatus.can_manage || state.refStatus.can_delete))" class="modal-section anomaly-section">
+                            <h4><i class="fa fa-wrench"/> <t t-if="state.detailBox.is_anomaly">Correction, annulation ou suppression</t><t t-else="">Annulation</t></h4>
+                            <p t-if="state.detailBox.duplicate_message" t-esc="state.detailBox.duplicate_message"/>
+                            <div t-if="!state.correctionMode" class="anomaly-buttons">
+                                <button t-if="state.detailBox.is_anomaly &amp;&amp; state.refStatus.can_manage" class="btn-correct" t-on-click="enterCorrectionMode">
+                                    <i class="fa fa-pencil"/> Lancer la correction
+                                </button>
+                                <button t-if="state.detailBox.can_cancel_duplicate" class="btn-cancel-box" t-on-click="enterCancellationMode">
+                                    <i class="fa fa-ban"/> Annuler la BOX
+                                </button>
+                                <button t-if="state.detailBox.is_anomaly &amp;&amp; state.refStatus.can_delete" class="btn-delete" t-on-click="deleteBox">
+                                    <i class="fa fa-trash"/> Supprimer la boxe
+                                </button>
+                            </div>
+                            <div t-else="" class="correction-form">
+                                <label>Actions effectuées (obligatoire)</label>
+                                <textarea t-ref="correctionActions"
+                                          placeholder="Décris les actions effectuées..."
+                                          required="required"
+                                          rows="3"/>
+
+                                <label t-if="state.correctionMode !== 'cancel'">Nouvelle étiquette (scan)</label>
+                                <input t-if="state.correctionMode !== 'cancel'" type="text" t-ref="correctionScan"
+                                       placeholder="Scanner ou saisir la nouvelle étiquette..."
+                                       t-on-keydown="onCorrectionKeyDown"/>
+
+                                <div class="correction-buttons">
+                                    <button class="btn-cancel" t-on-click="cancelCorrection">Retour</button>
+                                    <button t-if="state.correctionMode === 'cancel'" class="btn-confirm" t-on-click="cancelDuplicateBox">
+                                        <i class="fa fa-ban"/> Confirmer l’annulation
+                                    </button>
+                                    <button t-else="" class="btn-confirm" t-on-click="confirmCorrection">
+                                        <i class="fa fa-check"/> Valider la correction
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </t>
+
+    <t t-name="ar_atelier.ClosureBlockedDialog">
+        <Dialog title="'Clôture impossible'" size="'md'" contentClass="'o_ar_closure_dialog'">
+            <div class="o_ar_closure_notice">
+                <div class="o_ar_closure_icon"><i class="fa fa-exclamation-triangle" aria-hidden="true"/></div>
+                <h3>Des anomalies restent à traiter</h3>
+                <p>Merci de corriger les anomalies avant de clôturer la session.</p>
+                <div class="o_ar_closure_count" role="status">
+                    <strong t-esc="props.count"/>
+                    <t t-if="props.count === 1"> boxe reste dans la palette en anomalie.</t>
+                    <t t-else=""> boxes restent dans la palette en anomalie.</t>
+                </div>
+                <small>Votre session reste ouverte.</small>
+            </div>
+            <t t-set-slot="footer">
+                <button type="button" class="btn btn-primary" t-on-click="returnToAnomalies">
+                    <i class="fa fa-arrow-left me-2" aria-hidden="true"/>Revenir aux anomalies
+                </button>
+            </t>
+        </Dialog>
+    </t>
+</templates>

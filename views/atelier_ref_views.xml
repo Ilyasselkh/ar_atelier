@@ -1,0 +1,216 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Référentiel UC -->
+    <record id="view_atelier_uc_ref_list" model="ir.ui.view">
+        <field name="name">ar.atelier.uc.ref.list</field>
+        <field name="model">ar.atelier.uc.ref</field>
+        <field name="arch" type="xml">
+            <list string="Référentiel UC">
+                <field name="name"/>
+                <field name="description"/>
+                <field name="qty_per_carton"/>
+                <field name="active"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_atelier_uc_ref_form" model="ir.ui.view">
+        <field name="name">ar.atelier.uc.ref.form</field>
+        <field name="model">ar.atelier.uc.ref</field>
+        <field name="arch" type="xml">
+            <form string="Référence UC">
+                <sheet>
+                    <div class="oe_title">
+                        <label for="name"/>
+                        <h1><field name="name" placeholder="Référence MAT"/></h1>
+                    </div>
+                    <group>
+                        <field name="description"/>
+                        <field name="qty_per_carton"/>
+                        <field name="active"/>
+                    </group>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_atelier_uc_ref_search" model="ir.ui.view">
+        <field name="name">ar.atelier.uc.ref.search</field>
+        <field name="model">ar.atelier.uc.ref</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="description"/>
+                <filter string="Actifs" name="active" domain="[('active','=',True)]"/>
+                <filter string="Inactifs" name="inactive" domain="[('active','=',False)]"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_atelier_uc_ref" model="ir.actions.act_window">
+        <field name="name">Référentiel UC</field>
+        <field name="res_model">ar.atelier.uc.ref</field>
+        <field name="context">{'active_test': False}</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <!-- Listes TRI -->
+    <record id="view_atelier_tri_list_list" model="ir.ui.view">
+        <field name="name">ar.atelier.tri.list.list</field>
+        <field name="model">ar.atelier.tri.list</field>
+        <field name="arch" type="xml">
+            <list string="Listes TRI">
+                <field name="name"/>
+                <field name="valid_from"/>
+                <field name="valid_to"/>
+                <field name="ref_count"/>
+                <field name="active" widget="boolean_toggle"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_atelier_tri_list_form" model="ir.ui.view">
+        <field name="name">ar.atelier.tri.list.form</field>
+        <field name="model">ar.atelier.tri.list</field>
+        <field name="arch" type="xml">
+            <form string="Liste TRI">
+                <header>
+                    <button name="action_download_template" type="object"
+                            string="Télécharger template Excel" icon="fa-download"
+                            class="btn-secondary"/>
+                    <button name="action_import_excel" type="object" groups="ar_atelier.group_atelier_manager"
+                            string="Importer Excel" icon="fa-upload"
+                            class="btn-primary"
+                            invisible="not import_file"
+                            confirm="Cela remplacera toutes les références actuelles. Continuer ?"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <label for="name"/>
+                        <h1><field name="name" placeholder="ex: Tri semaine 18 - 2026"/></h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="valid_from"/>
+                            <field name="valid_to"/>
+                            <field name="active"/>
+                        </group>
+                        <group>
+                            <field name="ref_count"/>
+                        </group>
+                    </group>
+                    <group string="Import en masse depuis Excel">
+                        <field name="import_file" filename="import_filename" widget="binary"/>
+                        <field name="import_filename" invisible="1"/>
+                        <div colspan="2" class="text-muted" style="font-size:12px;">
+                            Colonnes attendues : <strong>reference</strong>, <strong>description</strong>, <strong>tri_percent</strong> (en %).
+                            Télécharger le template ci-dessus pour avoir un exemple.
+                            L'import remplace toutes les références existantes.
+                            Le remplacement d'une liste déjà alimentée est réservé aux administrateurs Odoo.
+                        </div>
+                    </group>
+                    <notebook>
+                        <page string="Références à trier">
+                            <field name="ref_ids">
+                                <list editable="bottom">
+                                    <field name="name"/>
+                                    <field name="description"/>
+                                    <field name="tri_percent" widget="percentage"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_atelier_tri_list" model="ir.actions.act_window">
+        <field name="name">Listes TRI hebdomadaires</field>
+        <field name="res_model">ar.atelier.tri.list</field>
+        <field name="context">{'active_test': False}</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <!-- Listes OF -->
+    <record id="view_atelier_of_list_list" model="ir.ui.view">
+        <field name="name">ar.atelier.of.list.list</field>
+        <field name="model">ar.atelier.of.list</field>
+        <field name="arch" type="xml">
+            <list string="Listes OF">
+                <field name="name"/>
+                <field name="valid_from"/>
+                <field name="valid_to"/>
+                <field name="of_count"/>
+                <field name="active" widget="boolean_toggle"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_atelier_of_list_form" model="ir.ui.view">
+        <field name="name">ar.atelier.of.list.form</field>
+        <field name="model">ar.atelier.of.list</field>
+        <field name="arch" type="xml">
+            <form string="Liste OF">
+                <header>
+                    <button name="action_download_template" type="object"
+                            string="Télécharger template Excel" icon="fa-download"
+                            class="btn-secondary"/>
+                    <button name="action_import_excel" type="object" groups="ar_atelier.group_atelier_manager"
+                            string="Importer Excel" icon="fa-upload"
+                            class="btn-primary"
+                            invisible="not import_file"
+                            confirm="Cela remplacera tous les OF actuels. Continuer ?"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <label for="name"/>
+                        <h1><field name="name" placeholder="ex: OF semaine 18 - 2026"/></h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="valid_from"/>
+                            <field name="valid_to"/>
+                            <field name="active"/>
+                        </group>
+                        <group>
+                            <field name="of_count"/>
+                        </group>
+                    </group>
+                    <group string="Import en masse depuis Excel">
+                        <field name="import_file" filename="import_filename" widget="binary"/>
+                        <field name="import_filename" invisible="1"/>
+                        <div colspan="2" class="text-muted" style="font-size:12px;">
+                            Colonnes attendues : <strong>of</strong> (ou po), <strong>description</strong>.
+                            Télécharger le template ci-dessus pour avoir un exemple.
+                            L'import remplace tous les OF existants.
+                            Le remplacement d'une liste déjà alimentée est réservé aux administrateurs Odoo.
+                        </div>
+                    </group>
+                    <notebook>
+                        <page string="OF actifs">
+                            <field name="of_ids">
+                                <list editable="bottom">
+                                    <field name="name" string="N° OF (PO)"/>
+                                    <field name="description"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_atelier_of_list" model="ir.actions.act_window">
+        <field name="name">Listes OF hebdomadaires</field>
+        <field name="res_model">ar.atelier.of.list</field>
+        <field name="context">{'active_test': False}</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+</odoo>

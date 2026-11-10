@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_atelier_box_list" model="ir.ui.view">
+        <field name="name">ar.atelier.box.list</field>
+        <field name="model">ar.atelier.box</field>
+        <field name="arch" type="xml">
+            <list string="Boxes scannées" decoration-danger="is_anomaly == True">
+                <field name="scan_datetime"/>
+                <field name="session_id"/>
+                <field name="section"/>
+                <field name="position"/>
+                <field name="mat" string="Réf"/>
+                <field name="qty"/>
+                <field name="bat" string="Lot"/>
+                <field name="hu"/>
+                <field name="datamatrix_raw" string="Étiquette" optional="hide"/>
+                <field name="is_anomaly" widget="boolean_toggle" optional="show"/>
+                <field name="correction_count" string="Corrections" optional="show"/>
+                <field name="user_id" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_atelier_box_form" model="ir.ui.view">
+        <field name="name">ar.atelier.box.form</field>
+        <field name="model">ar.atelier.box</field>
+        <field name="arch" type="xml">
+            <form string="Boxe">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="session_id"/>
+                            <field name="pallet_id"/>
+                            <field name="section"/>
+                            <field name="position"/>
+                            <field name="user_id"/>
+                            <field name="scan_datetime"/>
+                        </group>
+                        <group>
+                            <field name="layer"/>
+                            <field name="grid_row"/>
+                            <field name="grid_col"/>
+                            <field name="is_anomaly"/>
+                            <field name="correction_count"/>
+                            <field name="label_format"/>
+                        </group>
+                    </group>
+                    <group string="Étiquette">
+                        <field name="datamatrix_raw" nolabel="1"/>
+                    </group>
+                    <notebook>
+                        <page string="Format Custom">
+                            <group>
+                                <group>
+                                    <field name="mat"/>
+                                    <field name="po"/>
+                                    <field name="pomat"/>
+                                    <field name="sloc"/>
+                                    <field name="qty"/>
+                                    <field name="sut"/>
+                                    <field name="hu"/>
+                                </group>
+                                <group>
+                                    <field name="bat"/>
+                                    <field name="bsd"/>
+                                    <field name="pwg"/>
+                                    <field name="wghtg"/>
+                                    <field name="plt"/>
+                                    <field name="pal"/>
+                                    <field name="btyp"/>
+                                    <field name="bver"/>
+                                </group>
+                            </group>
+                        </page>
+                        <page string="Format GS1">
+                            <group>
+                                <group>
+                                    <field name="gtin"/>
+                                    <field name="lot"/>
+                                    <field name="serial"/>
+                                </group>
+                                <group>
+                                    <field name="variable_qty"/>
+                                    <field name="total_qty"/>
+                                    <field name="production_date"/>
+                                    <field name="expiration_date"/>
+                                </group>
+                            </group>
+                        </page>
+                        <page string="Historique corrections">
+                            <field name="correction_ids" readonly="1">
+                                <list>
+                                    <field name="correction_date"/>
+                                    <field name="user_id"/>
+                                    <field name="old_datamatrix"/>
+                                    <field name="new_datamatrix"/>
+                                    <field name="actions_taken"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_atelier_box_search" model="ir.ui.view">
+        <field name="name">ar.atelier.box.search</field>
+        <field name="model">ar.atelier.box</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="datamatrix_raw"/>
+                <field name="mat"/>
+                <field name="bat"/>
+                <field name="hu"/>
+                <field name="po"/>
+                <field name="session_id"/>
+                <filter string="Stock (P1)" name="p1" domain="[('section','=',1)]"/>
+                <filter string="Tri (P2)" name="p2" domain="[('section','=',2)]"/>
+                <filter string="Anomalie (P3)" name="p3" domain="[('section','=',3)]"/>
+                <separator/>
+                <filter string="Anomalies seules" name="anomaly" domain="[('is_anomaly','=',True)]"/>
+                <filter string="Avec correction" name="corrected" domain="[('correction_count','>',0)]"/>
+                <separator/>
+                <filter string="Par session" name="group_session" context="{'group_by':'session_id'}"/>
+                <filter string="Par référence" name="group_mat" context="{'group_by':'mat'}"/>
+                <filter string="Par section" name="group_section" context="{'group_by':'section'}"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_atelier_box" model="ir.actions.act_window">
+        <field name="name">Boxes scannées</field>
+        <field name="res_model">ar.atelier.box</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_atelier_box_search"/>
+    </record>
+
+</odoo>

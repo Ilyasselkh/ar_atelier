@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Action client : interface scan initial (Stock/Tri/Anomalie) -->
+    <record id="action_scan_app" model="ir.actions.client">
+        <field name="name">Atelier — Sortie PROD</field>
+        <field name="tag">ar_atelier_scan_app</field>
+    </record>
+
+    <!-- Action client : interface scan sortie de tri (Stock/Anomalie) -->
+    <record id="action_scan_app_post_tri" model="ir.actions.client">
+        <field name="name">Atelier — Sortie de tri</field>
+        <field name="tag">ar_atelier_scan_app_post_tri</field>
+    </record>
+
+    <record id="action_scan_app_warehouse" model="ir.actions.client">
+        <field name="name">Atelier — Entré Magasin LOG</field>
+        <field name="tag">ar_atelier_scan_app_warehouse</field>
+    </record>
+
+    <!-- Menu racine -->
+    <menuitem id="menu_atelier_root"
+              name="Atelier"
+              web_icon="ar_atelier,static/description/icon.png"
+              sequence="50"/>
+
+    <!-- Sous-menu : scan initial -->
+    <menuitem id="menu_atelier_scan"
+              name="Sortie PROD"
+              parent="menu_atelier_root"
+              action="action_scan_app"
+              groups="group_atelier_display_prod"
+              sequence="10"/>
+
+    <!-- Sous-menu : sortie de tri -->
+    <menuitem id="menu_atelier_scan_post_tri"
+              name="Sortie de tri"
+              parent="menu_atelier_root"
+              action="action_scan_app_post_tri"
+              groups="group_atelier_display_logistics"
+              sequence="20"/>
+
+    <menuitem id="menu_atelier_scan_warehouse"
+              name="Entré Magasin LOG"
+              parent="menu_atelier_root"
+              action="action_scan_app_warehouse"
+              groups="group_atelier_display_logistics"
+              sequence="30"/>
+
+    <record id="action_scan_app_warehouse_out" model="ir.actions.client">
+        <field name="name">Atelier — Sortie Magasin LOG</field>
+        <field name="tag">ar_atelier_scan_app_warehouse_out</field>
+    </record>
+    <menuitem id="menu_atelier_scan_warehouse_out" name="Sortie Magasin LOG"
+              groups="group_atelier_display_logistics"
+              parent="menu_atelier_root" action="action_scan_app_warehouse_out" sequence="40"/>
+    <record id="action_atelier_stock_overview" model="ir.actions.client">
+        <field name="name">Suivi du stock</field>
+        <field name="tag">ar_atelier_stock_overview</field>
+    </record>
+    <menuitem id="menu_atelier_stock_overview" name="Suivi du stock"
+              parent="menu_atelier_root" action="action_atelier_stock_overview"
+              groups="group_atelier_stock_overview" sequence="50"/>
+</odoo>

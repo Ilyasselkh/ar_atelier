@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_atelier_pallet_list" model="ir.ui.view">
+        <field name="name">ar.atelier.pallet.list</field>
+        <field name="model">ar.atelier.pallet</field>
+        <field name="arch" type="xml">
+            <list string="Palettes">
+                <field name="display_name"/>
+                <field name="session_id"/>
+                <field name="number"/>
+                <field name="box_count"/>
+                <field name="capacity"/>
+                <field name="is_full" widget="boolean_toggle"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_atelier_pallet_form" model="ir.ui.view">
+        <field name="name">ar.atelier.pallet.form</field>
+        <field name="model">ar.atelier.pallet</field>
+        <field name="arch" type="xml">
+            <form string="Palette">
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="display_name" readonly="1"/></h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="session_id"/>
+                            <field name="number"/>
+                            <field name="capacity"/>
+                        </group>
+                        <group>
+                            <field name="rows"/>
+                            <field name="cols"/>
+                            <field name="layers"/>
+                            <field name="box_count"/>
+                            <field name="is_full"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Boxes">
+                            <field name="box_ids" readonly="1">
+                                <list>
+                                    <field name="position"/>
+                                    <field name="layer"/>
+                                    <field name="grid_row"/>
+                                    <field name="grid_col"/>
+                                    <field name="datamatrix_raw"/>
+                                    <field name="gtin"/>
+                                    <field name="lot"/>
+                                    <field name="scan_datetime"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_atelier_pallet" model="ir.actions.act_window">
+        <field name="name">Palettes</field>
+        <field name="res_model">ar.atelier.pallet</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+</odoo>

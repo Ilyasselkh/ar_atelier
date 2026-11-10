@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- FORM -->
+    <record id="view_atelier_session_form" model="ir.ui.view">
+        <field name="name">ar.atelier.session.form</field>
+        <field name="model">ar.atelier.session</field>
+        <field name="arch" type="xml">
+            <form string="Session Atelier">
+                <header>
+                    <button name="action_resume_scan" type="object"
+                            groups="ar_atelier.group_atelier_user,base.group_system"
+                            string="Reprendre le scan" class="btn-primary"
+                            invisible="state != 'in_progress'"/>
+                    <button name="action_start" type="object" groups="ar_atelier.group_atelier_manager"
+                            string="Démarrer" class="btn-primary"
+                            invisible="state != 'draft'"/>
+                    <button name="action_done" type="object" groups="ar_atelier.group_atelier_manager"
+                            string="Clôturer" class="btn-primary"
+                            invisible="state != 'in_progress'"/>
+                    <button name="action_reset_to_draft" type="object" groups="ar_atelier.group_atelier_manager"
+                            string="Remettre en brouillon"
+                            invisible="state not in ('done','cancelled')"/>
+                    <button name="action_cancel" type="object" groups="ar_atelier.group_atelier_manager"
+                            string="Annuler"
+                            invisible="state in ('done','cancelled','reset')"/>
+                    <field name="state" widget="statusbar"
+                           statusbar_visible="draft,in_progress,done,reset"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" readonly="1"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="user_id"/>
+                            <field name="mode" invisible="1"/>
+                            <field name="warehouse_out_reason" invisible="mode != 'warehouse_out'"
+                                   required="mode == 'warehouse_out' and state == 'done'"/>
+                            <field name="date_start"/>
+                            <field name="date_end" invisible="state not in ('done','cancelled','reset')"/>
+                        </group>
+                        <group>
+                            <field name="total_boxes"/>
+                            <field name="boxes_p1"/>
+                            <field name="boxes_p2"/>
+                            <field name="boxes_p3"/>
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <page string="Scan et visualisation" name="scan">
+                            <field name="id" widget="ar_pallet_visualizer"
+                                   nolabel="1"
+                                   options="{'session_field': 'id'}"/>
+                        </page>
+                        <page string="Palettes" name="pallets">
+                            <field name="pallet_ids" readonly="1">
+                                <list>
+                                    <field name="number"/>
+                                    <field name="box_count"/>
+                                    <field name="capacity"/>
+                                    <field name="is_full" widget="boolean_toggle"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Boxes scannées" name="boxes">
+                            <field name="box_ids" readonly="1">
+                                <list>
+                                    <field name="scan_datetime"/>
+                                    <field name="section"/>
+                                    <field name="position"/>
+                                    <field name="datamatrix_raw"/>
+                                    <field name="gtin"/>
+                                    <field name="lot"/>
+                                    <field name="serial"/>
+                                    <field name="user_id"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <!-- LIST -->
+    <record id="view_atelier_session_list" model="ir.ui.view">
+        <field name="name">ar.atelier.session.list</field>
+        <field name="model">ar.atelier.session</field>
+        <field name="arch" type="xml">
+            <list string="Sessions Atelier" decoration-info="state == 'in_progress'"
+                  decoration-success="state == 'done'"
+                  decoration-muted="state == 'cancelled'">
+                <field name="name"/>
+                <field name="user_id"/>
+                <field name="date_start"/>
+                <field name="date_end"/>
+                <field name="total_boxes"/>
+                <field name="boxes_p1" string="P1"/>
+                <field name="boxes_p2" string="P2"/>
+                <field name="boxes_p3" string="P3"/>
+                <field name="state" widget="badge"
+                       decoration-info="state == 'in_progress'"
+                       decoration-success="state == 'done'"
+                       decoration-muted="state == 'cancelled'"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- KANBAN -->
+    <record id="view_atelier_session_kanban" model="ir.ui.view">
+        <field name="name">ar.atelier.session.kanban</field>
+        <field name="model">ar.atelier.session</field>
+        <field name="arch" type="xml">
+            <kanban default_order="create_date desc" sample="1">
+                <field name="state"/>
+                <field name="name"/>
+                <field name="user_id"/>
+                <field name="date_start"/>
+                <field name="total_boxes"/>
+                <field name="boxes_p1"/>
+                <field name="boxes_p2"/>
+                <field name="boxes_p3"/>
+                <templates>
+                    <t t-name="card">
+                        <div class="oe_kanban_card oe_kanban_global_click p-2">
+                            <div class="o_kanban_record_top">
+                                <strong><field name="name"/></strong>
+                                <span class="float-end">
+                                    <field name="state" widget="label_selection"
+                                           options="{'classes': {'draft':'default','in_progress':'info','done':'success','cancelled':'muted'}}"/>
+                                </span>
+                            </div>
+                            <div class="o_kanban_record_body">
+                                <div><i class="fa fa-user"/> <field name="user_id"/></div>
+                                <div><i class="fa fa-clock-o"/> <field name="date_start"/></div>
+                                <div class="mt-2 d-flex justify-content-between">
+                                    <span class="badge text-bg-primary">P1 : <field name="boxes_p1"/></span>
+                                    <span class="badge text-bg-success">P2 : <field name="boxes_p2"/></span>
+                                    <span class="badge text-bg-warning">P3 : <field name="boxes_p3"/></span>
+                                </div>
+                                <div class="mt-1 text-end"><strong>Total : <field name="total_boxes"/></strong></div>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <!-- SEARCH -->
+    <record id="view_atelier_session_search" model="ir.ui.view">
+        <field name="name">ar.atelier.session.search</field>
+        <field name="model">ar.atelier.session</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="user_id"/>
+                <filter string="En cours" name="in_progress" domain="[('state','=','in_progress')]"/>
+                <filter string="Clôturées" name="done" domain="[('state','=','done')]"/>
+                <filter string="Réinitialisées" name="reset" domain="[('state','=','reset')]"/>
+                <filter string="Brouillon" name="draft" domain="[('state','=','draft')]"/>
+                <separator/>
+                <filter string="Mes sessions" name="my_sessions" domain="[('user_id','=', uid)]"/>
+                <separator/>
+                <filter string="Par opérateur" name="group_user" context="{'group_by':'user_id'}"/>
+                <filter string="Par statut" name="group_state" context="{'group_by':'state'}"/>
+            </search>
+        </field>
+    </record>
+
+    <!-- ACTION -->
+    <record id="action_atelier_session" model="ir.actions.act_window">
+        <field name="name">Sessions de scan</field>
+        <field name="res_model">ar.atelier.session</field>
+        <field name="view_mode">kanban,list,form</field>
+        <field name="search_view_id" ref="view_atelier_session_search"/>
+        <field name="context">{'search_default_my_sessions': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Démarrer une nouvelle session de scan</p>
+            <p>Scanne tes datamatrix : les boxes sont automatiquement routées vers la palette 1, 2 ou 3 selon leur préfixe.</p>
+        </field>
+    </record>
+
+    <!-- ACTION SERVER — démarrer directement une session -->
+    <record id="action_atelier_new_session" model="ir.actions.server">
+        <field name="name">Nouveau scan</field>
+        <field name="model_id" ref="model_ar_atelier_session"/>
+        <field name="state">code</field>
+        <field name="code">
+session = env['ar.atelier.session'].create({})
+action = {
+    'type': 'ir.actions.act_window',
+    'res_model': 'ar.atelier.session',
+    'res_id': session.id,
+    'view_mode': 'form',
+    'target': 'current',
+}
+        </field>
+    </record>
+
+</odoo>

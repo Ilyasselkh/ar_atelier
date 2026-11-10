@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_atelier_reset_form" model="ir.ui.view">
+        <field name="name">ar.atelier.reset.form</field>
+        <field name="model">ar.atelier.reset</field>
+        <field name="arch" type="xml">
+            <form string="Réinitialisation" create="false" delete="false" class="o_atelier_reset_form">
+                <div class="ar-reset-hero">
+                    <div class="ar-reset-hero-icon"><i class="fa fa-refresh" aria-hidden="true"/></div>
+                    <div class="ar-reset-hero-copy">
+                        <span class="ar-reset-eyebrow">ATELIER / NOUVEAU CYCLE</span>
+                        <h2>Un nouveau départ,<br/>un historique préservé.</h2>
+                        <p>Terminez les sessions ouvertes et démarrez un nouveau cycle de contrôle des scans.</p>
+                    </div>
+                    <span class="ar-reset-hero-mark" aria-hidden="true"><i class="fa fa-refresh"/></span>
+                </div>
+                <div class="ar-reset-content">
+                    <div class="ar-reset-section-heading"><span>CE QUI VA SE PASSER</span><span class="ar-reset-badge"><i class="fa fa-shield" aria-hidden="true"/> Historique conservé</span></div>
+                    <div class="ar-reset-steps">
+                        <div class="ar-reset-step"><span class="ar-reset-step-icon ar-reset-blue"><i class="fa fa-check-circle" aria-hidden="true"/></span><span class="ar-reset-step-number">01</span><h3>Terminer les sessions</h3><p>Les sessions en cours et les brouillons sans anomalie passent à l’état <strong>Réinitialisée</strong>.</p></div>
+                        <div class="ar-reset-step"><span class="ar-reset-step-icon ar-reset-amber"><i class="fa fa-exclamation-triangle" aria-hidden="true"/></span><span class="ar-reset-step-number">02</span><h3>Préserver les exceptions</h3><p>Les sessions avec des anomalies restent ouvertes. Leur nom apparaît dans le résultat.</p></div>
+                        <div class="ar-reset-step"><span class="ar-reset-step-icon ar-reset-teal"><i class="fa fa-repeat" aria-hidden="true"/></span><span class="ar-reset-step-number">03</span><h3>Relancer les contrôles</h3><p>Les nouveaux scans démarrent un nouveau cycle. Toutes les BOX restent dans l’historique.</p></div>
+                    </div>
+                    <div class="ar-reset-note"><i class="fa fa-info-circle" aria-hidden="true"/><p>Les scans des sessions bloquées restent pris en compte jusqu’au traitement de leur dernière anomalie. Vous pourrez ensuite relancer la réinitialisation.</p></div>
+                    <div class="ar-reset-result" invisible="not result" role="status">
+                        <div class="ar-reset-result-heading"><i class="fa fa-list-alt" aria-hidden="true"/><h3>Résultat de la réinitialisation</h3></div>
+                        <field name="result" nolabel="1" readonly="1"/>
+                    </div>
+                </div>
+                <footer>
+                    <button name="action_reset" type="object" string="Réinitialiser les sessions" icon="fa-refresh" class="btn-primary ar-reset-primary"/>
+                    <button name="action_history" type="object" string="Sessions réinitialisées" icon="fa-history" class="btn-secondary ar-reset-history"/>
+                    <button string="Fermer" special="cancel" class="btn-secondary ar-reset-close"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+    <record id="action_atelier_reset" model="ir.actions.act_window">
+        <field name="name">Réinitialisation</field>
+        <field name="res_model">ar.atelier.reset</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+    <menuitem id="menu_atelier_reset" name="Réinitialisation" parent="menu_atelier_root"
+              action="action_atelier_reset" groups="group_atelier_reset" sequence="60"/>
+</odoo>

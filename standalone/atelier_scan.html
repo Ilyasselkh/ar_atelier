@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Atelier — Scan Datamatrix</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f7f8fa; color: #333; }
+
+.app { display: flex; flex-direction: column; height: 100vh; }
+
+.toolbar {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 16px; background: #fff;
+    border-bottom: 1px solid #e3e6ea;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.toolbar h1 {
+    font-size: 18px; font-weight: 700; color: #2c3e50;
+    margin-right: 8px;
+}
+.scan-input {
+    flex: 1; display: flex; align-items: center; gap: 8px;
+}
+.scan-input i {
+    width: 20px; text-align: center; color: #714B67; font-style: normal;
+}
+.scan-input input {
+    flex: 1; font-family: monospace; font-size: 14px;
+    padding: 8px 12px;
+    border: 2px solid #714B67; border-radius: 4px;
+    background: #fff;
+}
+.scan-input input:focus {
+    outline: none; border-color: #875A7B;
+    box-shadow: 0 0 0 3px rgba(135, 90, 123, 0.2);
+}
+.mode-toggle {
+    display: flex; border: 1px solid #c4c8cc;
+    border-radius: 4px; overflow: hidden;
+}
+.mode-toggle button {
+    padding: 8px 16px; background: #fff; border: none;
+    cursor: pointer; font-weight: 500; font-size: 13px;
+}
+.mode-toggle button.active { background: #714B67; color: #fff; }
+.mode-toggle button:hover:not(.active) { background: #f0f0f0; }
+
+.counters { display: flex; gap: 6px; font-size: 13px; }
+.counters .badge {
+    padding: 5px 10px; border-radius: 12px; font-weight: 500;
+}
+.badge-p1 { background: #e3f2fd; color: #1565c0; }
+.badge-p2 { background: #e8f5e9; color: #2e7d32; }
+.badge-p3 { background: #fff3e0; color: #e65100; }
+.badge-total { background: #f3e5f5; color: #6a1b9a; }
+
+.btn-reset {
+    padding: 8px 12px; background: #ef5350; color: #fff;
+    border: none; border-radius: 4px; cursor: pointer; font-size: 13px;
+}
+.btn-reset:hover { background: #d32f2f; }
+
+.message {
+    padding: 8px 16px; font-size: 13px; text-align: center; font-weight: 500;
+}
+.message.success { background: #e8f5e9; color: #2e7d32; }
+.message.error   { background: #ffebee; color: #c62828; }
+.message.info    { background: #e3f2fd; color: #1565c0; }
+
+.canvas-wrap {
+    flex: 1; position: relative;
+    background: linear-gradient(180deg, #eef2f5 0%, #d6dde3 100%);
+    overflow: hidden;
+}
+
+.view-2d {
+    display: flex; justify-content: space-around; align-items: flex-start;
+    padding: 20px; gap: 20px; height: 100%;
+    overflow-x: auto; overflow-y: auto;
+}
+.pallet-card {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    background: #fff; border: 2px solid #d0d4d8;
+    border-radius: 8px; padding: 14px 16px;
+    min-width: 320px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.10);
+    transition: border-color 0.3s, box-shadow 0.3s;
+}
+.pallet-card.full {
+    border-color: #c62828;
+    box-shadow: 0 0 0 4px rgba(198, 40, 40, 0.18);
+    animation: ar-pulse 1.6s infinite;
+}
+@keyframes ar-pulse {
+    0%, 100% { box-shadow: 0 0 0 4px rgba(198, 40, 40, 0.18); }
+    50%      { box-shadow: 0 0 0 8px rgba(198, 40, 40, 0.32); }
+}
+.pallet-card h4 {
+    margin: 0 0 4px 0; font-size: 17px; font-weight: 700; color: #2c3e50;
+}
+.pallet-count { font-size: 14px; color: #555; }
+.pallet-count strong { font-size: 18px; color: #1976d2; }
+.full-alert {
+    margin-top: 6px; padding: 4px 10px;
+    background: #c62828; color: #fff;
+    font-weight: 700; font-size: 12px;
+    border-radius: 4px; letter-spacing: 0.5px;
+}
+.pallet-card svg {
+    background: #fafafa; border-radius: 4px; display: block;
+}
+.layer-info { font-size: 11px; color: #666; margin-top: 4px; }
+
+.view-3d { width: 100%; height: 100%; position: relative; }
+.view-3d canvas { display: block; width: 100% !important; height: 100% !important; }
+.view-3d-legend {
+    position: absolute; top: 12px; left: 12px;
+    background: rgba(255,255,255,0.92);
+    padding: 8px 12px; border-radius: 6px;
+    font-size: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+.view-3d-legend .row {
+    display: flex; align-items: center; gap: 6px; margin-bottom: 2px;
+}
+.view-3d-legend .swatch {
+    width: 14px; height: 14px; border-radius: 2px; display: inline-block;
+}
+
+.hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div class="app">
+
+    <div class="toolbar">
+        <h1>Atelier — Scan</h1>
+        <div class="scan-input">
+            <i>▶</i>
+            <input id="scan-input" type="text"
+                   placeholder="Scanner ou saisir un datamatrix (préfixe 1, 2 ou 3)..."
+                   autofocus/>
+        </div>
+        <div class="mode-toggle">
+            <button id="btn-2d" class="active">2D</button>
+            <button id="btn-3d">3D</button>
+        </div>
+        <div class="counters">
+            <span class="badge badge-p1">P1 : <span id="cnt-p1">0</span>/40</span>
+            <span class="badge badge-p2">P2 : <span id="cnt-p2">0</span>/40</span>
+            <span class="badge badge-p3">P3 : <span id="cnt-p3">0</span>/40</span>
+            <span class="badge badge-total">Total : <span id="cnt-total">0</span></span>
+        </div>
+        <button class="btn-reset" id="btn-reset">Réinitialiser</button>
+    </div>
+
+    <div id="message" class="message hidden"></div>
+
+    <div class="canvas-wrap">
+        <div id="view-2d" class="view-2d"></div>
+        <div id="view-3d" class="view-3d hidden">
+            <div class="view-3d-legend">
+                <div><strong>Vue 3D</strong></div>
+                <div class="row"><span class="swatch" style="background:#1976d2"></span> Palette 1</div>
+                <div class="row"><span class="swatch" style="background:#388e3c"></span> Palette 2</div>
+                <div class="row"><span class="swatch" style="background:#f57c00"></span> Palette 3</div>
+                <div style="margin-top:6px;color:#666;font-size:11px;">
+                    Clic gauche : rotation<br/>
+                    Molette : zoom<br/>
+                    Clic droit : déplacement
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// =========================================================================
+//  Atelier — Scan datamatrix standalone
+//  Routing : 1er caractère 1/2/3 -> palette correspondante
+//  Capacité : 40 boxes max par palette (4 cols x 2 rows x 5 layers)
+//  Vue 2D : SVG isométrique
+//  Vue 3D : Three.js
+// =========================================================================
+
+const COLS = 4, ROWS = 2, LAYERS = 5, CAPACITY = 40;
+const COLORS_HEX = { 1: "#1976d2", 2: "#388e3c", 3: "#f57c00" };
+const COLORS_INT = { 1: 0x1976d2, 2: 0x388e3c, 3: 0xf57c00 };
+
+// État global
+const state = {
+    pallets: {
+        1: { number: 1, boxes: [] },
+        2: { number: 2, boxes: [] },
+        3: { number: 3, boxes: [] },
+    },
+    mode: "2d",
+};
+
+// ---------------------------------------------------------------- Parsing GS1
+const FNC1 = String.fromCharCode(29);
+function quickSection(raw) {
+    if (!raw) return 0;
+    const c = raw[0];
+    if (c === "1" || c === "2" || c === "3") return parseInt(c, 10);
+    return 0;
+}
+function parseGs1(raw) {
+    const r = { raw };
+    let code = raw.replace(/\|/g, FNC1);
+    let i = 0;
+    while (i < code.length) {
+        if (code[i] === FNC1) { i++; continue; }
+        const ai = code.substring(i, i + 2);
+        i += 2;
+        // Longueurs fixes
+        if (ai === "01") { r.gtin = code.substring(i, i + 14); i += 14; continue; }
+        if (ai === "17") {
+            const v = code.substring(i, i + 6); i += 6;
+            r.exp = v;
+            continue;
+        }
+        // Variables (jusqu'au FNC1)
+        if (ai === "10" || ai === "21") {
+            const end = code.indexOf(FNC1, i);
+            const stop = end === -1 ? Math.min(i + 20, code.length) : end;
+            r[ai === "10" ? "lot" : "serial"] = code.substring(i, stop);
+            i = stop;
+            continue;
+        }
+        // AI inconnu : on stoppe
+        break;
+    }
+    return r;
+}
+
+// ----------------------------------------------------------------- Scan logic
+function processScan(raw) {
+    const code = (raw || "").trim();
+    if (!code) return showMsg("Code vide", "error");
+
+    const section = quickSection(code);
+    if (![1, 2, 3].includes(section)) {
+        return showMsg(`Code non routable (préfixe attendu : 1, 2, 3) — reçu : "${code[0] || ''}"`, "error");
+    }
+    const pallet = state.pallets[section];
+
+    if (pallet.boxes.length >= CAPACITY) {
+        return showMsg(`Palette ${section} pleine (${CAPACITY}/${CAPACITY}) — arrêt de scan`, "error");
+    }
+    if (pallet.boxes.find(b => b.raw === code)) {
+        return showMsg("Ce code a déjà été scanné dans cette session", "error");
+    }
+
+    const parsed = parseGs1(code);
+    const position = pallet.boxes.length;
+    pallet.boxes.push({ raw: code, position, ...parsed });
+
+    showMsg(`Boxe routée vers Palette ${section} (${pallet.boxes.length}/${CAPACITY})`, "success");
+    refresh();
+}
+
+function showMsg(text, type) {
+    const el = document.getElementById("message");
+    el.textContent = text;
+    el.className = "message " + type;
+    clearTimeout(showMsg._t);
+    showMsg._t = setTimeout(() => el.classList.add("hidden"), 4000);
+}
+
+// ----------------------------------------------------------------- Compteurs
+function refreshCounters() {
+    const p1 = state.pallets[1].boxes.length;
+    const p2 = state.pallets[2].boxes.length;
+    const p3 = state.pallets[3].boxes.length;
+    document.getElementById("cnt-p1").textContent = p1;
+    document.getElementById("cnt-p2").textContent = p2;
+    document.getElementById("cnt-p3").textContent = p3;
+    document.getElementById("cnt-total").textContent = p1 + p2 + p3;
+}
+
+// ----------------------------------------------------------------- 2D iso SVG
+function shadeHex(hex, factor) {
+    const h = hex.replace("#", "");
+    const r = parseInt(h.substring(0, 2), 16);
+    const g = parseInt(h.substring(2, 4), 16);
+    const b = parseInt(h.substring(4, 6), 16);
+    const c = v => Math.max(0, Math.min(255, Math.round(v)));
+    return `rgb(${c(r * factor)},${c(g * factor)},${c(b * factor)})`;
+}
+
+function buildIso(pallet) {
+    const boxW = 50, boxH = 36, isoX = 25, isoY = 16;
+    const palletThick = 14, padding = 14;
+    const totalIsoX = (ROWS - 1) * isoX;
+    const totalIsoY = (ROWS - 1) * isoY;
+    const w = padding * 2 + COLS * boxW + totalIsoX + isoX;
+    const h = padding * 2 + LAYERS * boxH + totalIsoY + palletThick + 8;
+    const baseX = padding;
+    const baseY = h - padding - palletThick;
+
+    const palletTopPoints = [
+        [baseX, baseY],
+        [baseX + COLS * boxW, baseY],
+        [baseX + COLS * boxW + totalIsoX, baseY - totalIsoY],
+        [baseX + totalIsoX, baseY - totalIsoY],
+    ].map(p => p.join(",")).join(" ");
+    const palletPoints = [
+        [baseX, baseY],
+        [baseX + COLS * boxW, baseY],
+        [baseX + COLS * boxW + totalIsoX, baseY - totalIsoY],
+        [baseX + COLS * boxW + totalIsoX, baseY - totalIsoY + palletThick],
+        [baseX + COLS * boxW, baseY + palletThick],
+        [baseX, baseY + palletThick],
+    ].map(p => p.join(",")).join(" ");
+
+    const boxesByPos = {};
+    for (const b of pallet.boxes) boxesByPos[b.position] = b;
+    const baseColor = COLORS_HEX[pallet.number];
+    const cells = [];
+
+    for (let layer = 0; layer < LAYERS; layer++) {
+        for (let row = ROWS - 1; row >= 0; row--) {
+            for (let col = 0; col < COLS; col++) {
+                const pos = layer * (ROWS * COLS) + row * COLS + col;
+                const box = boxesByPos[pos];
+                const fx = baseX + col * boxW + row * isoX;
+                const fy = baseY - layer * boxH - row * isoY - boxH;
+                const front = [[fx, fy], [fx + boxW, fy], [fx + boxW, fy + boxH], [fx, fy + boxH]];
+                const top = [[fx, fy], [fx + isoX, fy - isoY], [fx + boxW + isoX, fy - isoY], [fx + boxW, fy]];
+                const right = [[fx + boxW, fy], [fx + boxW + isoX, fy - isoY], [fx + boxW + isoX, fy + boxH - isoY], [fx + boxW, fy + boxH]];
+                const lf = 0.95 + layer * 0.04;
+                cells.push({
+                    pos, layer, row, col, box,
+                    front: front.map(p => p.join(",")).join(" "),
+                    top: top.map(p => p.join(",")).join(" "),
+                    right: right.map(p => p.join(",")).join(" "),
+                    cFront: shadeHex(baseColor, lf),
+                    cTop: shadeHex(baseColor, lf * 1.18),
+                    cRight: shadeHex(baseColor, lf * 0.78),
+                    labelX: fx + boxW / 2, labelY: fy + boxH / 2 + 3,
+                });
+            }
+        }
+    }
+    return { w, h, palletPoints, palletTopPoints, cells };
+}
+
+function render2D() {
+    const root = document.getElementById("view-2d");
+    root.innerHTML = "";
+    [1, 2, 3].forEach(n => {
+        const pallet = state.pallets[n];
+        const iso = buildIso(pallet);
+        const isFull = pallet.boxes.length >= CAPACITY;
+        const layer = pallet.boxes.length === 0 ? 0
+            : Math.min(Math.floor((pallet.boxes.length - 1) / (ROWS * COLS)), LAYERS - 1);
+
+        let cellsSvg = "";
+        for (const c of iso.cells) {
+            if (!c.box) {
+                cellsSvg += `<polygon points="${c.front}" fill="rgba(255,255,255,0.05)" stroke="rgba(120,120,120,0.4)" stroke-dasharray="4,3" stroke-width="1"/>`;
+            } else {
+                cellsSvg += `<g>
+                    <polygon points="${c.right}" fill="${c.cRight}" stroke="#1a1a1a" stroke-width="0.8"/>
+                    <polygon points="${c.top}" fill="${c.cTop}" stroke="#1a1a1a" stroke-width="0.8"/>
+                    <polygon points="${c.front}" fill="${c.cFront}" stroke="#1a1a1a" stroke-width="0.8">
+                        <title>Pos ${c.pos + 1} | Couche ${c.layer + 1}${c.box.gtin ? " | GTIN " + c.box.gtin : ""}${c.box.lot ? " | Lot " + c.box.lot : ""}</title>
+                    </polygon>
+                    <text x="${c.labelX}" y="${c.labelY}" text-anchor="middle" font-size="10" font-weight="bold" fill="#fff" style="pointer-events:none;">${c.pos + 1}</text>
+                </g>`;
+            }
+        }
+
+        const card = document.createElement("div");
+        card.className = "pallet-card" + (isFull ? " full" : "");
+        card.innerHTML = `
+            <h4>Palette ${n}</h4>
+            <div class="pallet-count"><strong>${pallet.boxes.length}</strong> / ${CAPACITY} boxes</div>
+            ${isFull ? '<div class="full-alert">⚠ PALETTE PLEINE</div>' : ''}
+            <svg width="${iso.w}" height="${iso.h}" viewBox="0 0 ${iso.w} ${iso.h}">
+                <polygon points="${iso.palletPoints}" fill="#a0673c" stroke="#5d3818" stroke-width="2"/>
+                <polygon points="${iso.palletTopPoints}" fill="#c2854f" stroke="#5d3818" stroke-width="1.5"/>
+                ${cellsSvg}
+            </svg>
+            <div class="layer-info">Couches : ${layer + 1} / ${LAYERS}</div>
+        `;
+        root.appendChild(card);
+    });
+}
+
+// ----------------------------------------------------------------- Three.js
+let three = { scene: null, camera: null, renderer: null, controls: null,
+              animationId: null, cubeGroups: { 1: null, 2: null, 3: null } };
+
+function init3D() {
+    if (!window.THREE) { console.error("Three.js non chargé"); return; }
+    const container = document.getElementById("view-3d");
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xeef2f5);
+
+    const w = container.clientWidth || 800;
+    const h = container.clientHeight || 500;
+    const camera = new THREE.PerspectiveCamera(45, w / h, 0.1, 10000);
+    camera.position.set(800, 700, 1100);
+    camera.lookAt(0, 100, 0);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(w, h);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    container.appendChild(renderer.domElement);
+
+    scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+    const dir = new THREE.DirectionalLight(0xffffff, 0.85);
+    dir.position.set(400, 800, 400);
+    dir.castShadow = true;
+    dir.shadow.mapSize.set(1024, 1024);
+    Object.assign(dir.shadow.camera, { left: -1000, right: 1000, top: 1000, bottom: -1000 });
+    scene.add(dir);
+
+    const ground = new THREE.Mesh(
+        new THREE.PlaneGeometry(4000, 4000),
+        new THREE.MeshStandardMaterial({ color: 0xc8cdd2, roughness: 0.95 })
+    );
+    ground.rotation.x = -Math.PI / 2;
+    ground.receiveShadow = true;
+    scene.add(ground);
+    scene.add(new THREE.GridHelper(3000, 30, 0x999999, 0xcccccc));
+
+    let controls = null;
+    if (THREE.OrbitControls) {
+        controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true; controls.dampingFactor = 0.08;
+        controls.target.set(0, 200, 0);
+    }
+
+    three.scene = scene; three.camera = camera; three.renderer = renderer; three.controls = controls;
+
+    [1, 2, 3].forEach((n, idx) => buildPallet3D(n, (idx - 1) * 1000));
+    refresh3DBoxes();
+
+    const animate = () => {
+        three.animationId = requestAnimationFrame(animate);
+        if (controls) controls.update();
+        renderer.render(scene, camera);
+    };
+    animate();
+
+    window.addEventListener("resize", onResize3D);
+}
+
+function onResize3D() {
+    const c = document.getElementById("view-3d");
+    if (!three.renderer || !three.camera) return;
+    three.renderer.setSize(c.clientWidth, c.clientHeight);
+    three.camera.aspect = c.clientWidth / c.clientHeight;
+    three.camera.updateProjectionMatrix();
+}
+
+function buildPallet3D(number, xCenter) {
+    const palletW = 800, palletD = 1200, palletH = 150;
+    const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(palletW, palletH, palletD),
+        new THREE.MeshStandardMaterial({ color: 0xb87a3d, roughness: 0.85 })
+    );
+    mesh.position.set(xCenter, palletH / 2, 0);
+    mesh.castShadow = true; mesh.receiveShadow = true;
+    three.scene.add(mesh);
+
+    const label = makeLabel("Palette " + number);
+    label.position.set(xCenter, palletH + 30, palletD / 2 + 60);
+    label.scale.set(300, 75, 1);
+    three.scene.add(label);
+
+    const group = new THREE.Group();
+    group.position.set(xCenter, palletH, 0);
+    three.scene.add(group);
+    three.cubeGroups[number] = group;
+}
+
+function makeLabel(text) {
+    const c = document.createElement("canvas");
+    c.width = 512; c.height = 128;
+    const ctx = c.getContext("2d");
+    ctx.fillStyle = "rgba(0,0,0,0.65)"; ctx.fillRect(0, 0, 512, 128);
+    ctx.font = "bold 64px Arial"; ctx.fillStyle = "#fff";
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(text, 256, 64);
+    const tex = new THREE.CanvasTexture(c);
+    return new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true }));
+}
+
+function refresh3DBoxes() {
+    if (!three.scene) return;
+    [1, 2, 3].forEach(n => {
+        const pallet = state.pallets[n];
+        const group = three.cubeGroups[n];
+        if (!group) return;
+        while (group.children.length > 0) {
+            const child = group.children[0];
+            group.remove(child);
+            if (child.geometry) child.geometry.dispose();
+            if (child.material) child.material.dispose();
+        }
+        const palletW = 800, palletD = 1200, boxH = 150;
+        const boxW = palletW / COLS, boxD = palletD / ROWS;
+        const color = COLORS_INT[n];
+        for (const box of pallet.boxes) {
+            const layer = Math.floor(box.position / (ROWS * COLS));
+            const inLayer = box.position % (ROWS * COLS);
+            const r = Math.floor(inLayer / COLS);
+            const c = inLayer % COLS;
+            const geo = new THREE.BoxGeometry(boxW * 0.95, boxH * 0.95, boxD * 0.95);
+            const colorObj = new THREE.Color(color).multiplyScalar(1 - layer * 0.06);
+            const cube = new THREE.Mesh(
+                geo, new THREE.MeshStandardMaterial({ color: colorObj, roughness: 0.55 })
+            );
+            cube.position.set(
+                -palletW / 2 + boxW / 2 + c * boxW,
+                boxH / 2 + layer * boxH,
+                -palletD / 2 + boxD / 2 + r * boxD
+            );
+            cube.castShadow = true; cube.receiveShadow = true;
+            group.add(cube);
+            const wire = new THREE.LineSegments(
+                new THREE.EdgesGeometry(geo),
+                new THREE.LineBasicMaterial({ color: 0x222222 })
+            );
+            wire.position.copy(cube.position);
+            group.add(wire);
+        }
+    });
+}
+
+function dispose3D() {
+    if (three.animationId) { cancelAnimationFrame(three.animationId); three.animationId = null; }
+    window.removeEventListener("resize", onResize3D);
+    if (three.controls && three.controls.dispose) three.controls.dispose();
+    if (three.renderer) {
+        const cv = three.renderer.domElement;
+        if (cv && cv.parentNode) cv.parentNode.removeChild(cv);
+        three.renderer.dispose();
+    }
+    three = { scene: null, camera: null, renderer: null, controls: null,
+              animationId: null, cubeGroups: { 1: null, 2: null, 3: null } };
+}
+
+// ----------------------------------------------------------------- Modes
+function setMode(m) {
+    state.mode = m;
+    document.getElementById("btn-2d").classList.toggle("active", m === "2d");
+    document.getElementById("btn-3d").classList.toggle("active", m === "3d");
+    document.getElementById("view-2d").classList.toggle("hidden", m !== "2d");
+    document.getElementById("view-3d").classList.toggle("hidden", m !== "3d");
+    if (m === "3d") init3D(); else dispose3D();
+}
+
+// ----------------------------------------------------------------- Refresh global
+function refresh() {
+    refreshCounters();
+    if (state.mode === "2d") render2D();
+    else refresh3DBoxes();
+}
+
+// ----------------------------------------------------------------- Bindings
+const input = document.getElementById("scan-input");
+input.addEventListener("keydown", e => {
+    if (e.key === "Enter") {
+        e.preventDefault();
+        const v = input.value.trim();
+        if (v) processScan(v);
+        input.value = "";
+        input.focus();
+    }
+});
+document.body.addEventListener("click", e => {
+    // Refocus scan si on clique en dehors d'un bouton/input
+    if (e.target.tagName === "BUTTON" || e.target.tagName === "INPUT") return;
+    input.focus();
+});
+
+document.getElementById("btn-2d").addEventListener("click", () => setMode("2d"));
+document.getElementById("btn-3d").addEventListener("click", () => setMode("3d"));
+document.getElementById("btn-reset").addEventListener("click", () => {
+    if (!confirm("Réinitialiser les 3 palettes ?")) return;
+    state.pallets[1].boxes = [];
+    state.pallets[2].boxes = [];
+    state.pallets[3].boxes = [];
+    refresh();
+    showMsg("Session réinitialisée", "info");
+});
+
+// Initial render
+refresh();
+input.focus();
+</script>
+</body>
+</html>
